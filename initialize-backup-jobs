@@ -1,0 +1,40 @@
+#!/usr/bin/env node
+
+const { resolve } = require('path')
+const { exec } = require('child_process')
+const fs = require('fs/promises')
+
+const buildAndInstallPackage = (folder) => {
+  const serviceName = folder.split('/').reverse()[0]
+
+  return new Promise((resolve, reject) => {
+    exec(`cd ${folder} && chmod +x ${serviceName} && mv ${serviceName} /usr/local/bin`, (err, stdout) => {
+    //    exec(`cd ${folder} && rm -rf ./pkg ${serviceName} && npm install && pkg -t node14-linux -o ${serviceName} .`, (err, stdout) => {
+      console.log(err || stdout)
+      return resolve(err || stdout)
+    })
+  })
+}
+
+;(async () => {
+  const servicesDirContents = await fs.readdir(
+    resolve(`./services`),
+    {
+      withFileTypes: true,
+    },
+  )
+
+  let serviceFolders = servicesDirContents.filter((_folder) => _folder.isDirectory())
+  serviceFolders = serviceFolders.map((_folder) =>
+    `${resolve('./services')}/${_folder.name}`
+  )
+
+  const promises = serviceFolders.map(async (folder) => {
+    await buildAndInstallPackage(folder)
+
+    return Promise.resolve()
+  })
+
+  await Promise.all(promises)
+})()
+
